@@ -1,0 +1,144 @@
+---
+title: "exploringRedWine.RMD"
+author: "Clasch"
+date: "February 3, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+When I was young, I couldn't stand red wine, perceiving it to be rancid juice. As I grew I was drawn to refine my palate, eventually gaining the ability to  rudimentary distinguish between "good" and "bad" wines. As a scientist, I am compelled to dig for a deeper understanding of red wine on a chemical level; what makes it good and bad.
+
+The first step to exploring the data in wineQualityReds is importing the csv and any libraries I'll need.
+
+```{r imports}
+wf = read.csv("wineQualityReds.csv")
+library(ggplot2)
+library(gridExtra)
+library(dplyr) #group_by(), mutate(), arrange()
+```
+
+Next, I want to look at the different variables in wf, or "winefile".
+
+```{r}
+names(wf)
+head(wf)
+```
+
+Since this exploration will be trying to associate and quantify different chemical levels with "goodness". I will likely plot most variables against quality to find associations.
+
+First, I will look at the range of quality of wines, as they were deemed by the sommeliers.
+```{r}
+summary(wf$quality)
+```
+```{r}
+qplot(x = quality, data = wf, geom = "histogram", binwidth = .5,
+      color = I("black"), fill = I("#900020")) + 
+  scale_x_continuous(lim = c(1,10), breaks = seq(1,10,1))
+```
+
+The distribution is narrow, with a median of '6', with the lowest grade being '3', and highest '8'.
+
+It is hopeful I will be able to draw conclusions of what chemical promotes (or demotes) a specific wine from the masses.
+
+#First though, I will look at acidity: (not necessarily, may need change)
+```{r histograms, echo=FALSE}
+p1 <- qplot(x = fixed.acidity, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+p2 <- qplot(x = volatile.acidity, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+p3 <- qplot(x = citric.acid, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+p4 <- qplot(x = residual.sugar, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+p5 <- qplot(x = chlorides, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+p6 <- qplot(x = free.sulfur.dioxide, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+p7 <- qplot(x = total.sulfur.dioxide, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+p8 <- qplot(x = density, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+p9 <- qplot(x = pH, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+p10 <- qplot(x = sulphates, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+p11 <- qplot(x = alcohol, data = wf, bins = 30, 
+      color = I("black"), fill = I("#09DD99"))
+grid.arrange( p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, ncol=4)
+```
+```{r}
+# summary(wf[, names(wf) != "density"])
+summary(wf, digits = 3)
+```
+
+```{r}
+qplot(data = wf, x = fixed.acidity, fill = fixed.acidity,geom = 'histogram') + 
+  facet_wrap(~quality, scales = "fixed") +
+  scale_x_continuous(lim = c(1,14), breaks = seq(1,14,1))
+```
+```{r}
+summary(wf$pH)
+```
+
+```{r}
+qplot(data = wf, x = volatile.acidity, fill = quality, geom = 'histogram') + 
+  facet_wrap(~quality, scales = "free") +
+  scale_x_continuous(lim = c(1,14), breaks = seq(1,14,1))
+
+qplot(x = quality, y = pH, data = wf)
+
+
+#correlation between fixed.acidity and pH, inverse as expected
+ggplot(aes(x = fixed.acidity, y = pH), data = wf) + geom_point(alpha = 1/2, position = "jitter")
+```
+```{r}
+quality_groups <- group_by(wf, quality)
+quality_by_pH <- summarise(quality_groups,
+          pH_mean = mean(pH),
+          pH_median = median(pH),
+          n = n() #only works for summarise
+          )
+
+#quality_by_pH <- arrange(quality_by_pH, -pH_mean) #how to order group by a variable
+quality_by_pH
+
+# another way to get this table
+quality_by_pH <- wf %>%         # %.% chains functions onto the dataset
+  group_by(quality) %>%
+  summarise(pH_mean = mean(pH),
+            pH_median = median(pH),
+            n = n()) %>%
+  arrange(quality)
+wf.quality_by_pH
+?'%>%'
+```
+```{r}
+qualities <- split(wf,wf$quality)
+lapply(qualities, function(x) {mean(x$pH)})
+# or could do lapply(qualities, summary)
+```
+
